@@ -3,6 +3,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+const bcrypt = require("bcryptjs");
 
 const app = express();
 
@@ -24,7 +25,7 @@ mongoose
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // === ROUTES ===
-app.use("/", require("./routes/auth")); // Consider using "/auth" prefix
+app.use("/", require("./routes/authRoutes")); // Consider using "/auth" prefix
 app.use("/student", require("./routes/studentRoutes"));
 app.use("/admin", require("./routes/adminRoutes"));
 app.use("/faculty", require("./routes/facultyRoutes")); // ✅ Ensures /faculty/:id will work

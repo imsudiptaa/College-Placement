@@ -9,9 +9,16 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Verify email configuration
+console.log('Email configuration:', {
+  service: 'Gmail',
+  user: process.env.EMAIL_USER ? process.env.EMAIL_USER.substring(0, 5) + '...' : 'Not set',
+  pass: process.env.EMAIL_PASSWORD ? 'Set (hidden)' : 'Not set'
+});
+
 transporter.verify((err, success) => {
   if (err) {
-    console.error('SMTP transporter failed:', err.message);
+    console.error('SMTP transporter failed:', err);
   } else {
     console.log('SMTP transporter is ready');
   }
@@ -35,6 +42,33 @@ const sendPasswordResetEmail = async (email, resetToken, userType) => {
   return transporter.sendMail(mailOptions);
 };
 
+const sendOTPEmail = async (email, otp) => {
+  console.log(`Preparing to send OTP email to ${email} with OTP: ${otp}`);
+  
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'Email Verification - NSEC Placement Portal',
+    html: `
+      <h2>Email Verification</h2>
+      <p>Your OTP for email verification is:</p>
+      <h1 style="color: #4a90e2; font-size: 32px; text-align: center;">${otp}</h1>
+      <p>This OTP will expire in 10 minutes.</p>
+      <p>If you didn't request this, please ignore this email.</p>
+    `,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`OTP email sent to ${email}: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    console.error(`Failed to send OTP email to ${email}:`, error);
+    throw error;
+  }
+};
+
 module.exports = {
   sendPasswordResetEmail,
+  sendOTPEmail,
 };

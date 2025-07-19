@@ -14,12 +14,36 @@
       unique: true,
       lowercase: true,
       trim: true,
+      validate: {
+        validator: function(email) {
+          return email.endsWith('@nsec.ac.in');
+        },
+        message: 'Email must be from @nsec.ac.in domain'
+      }
     },
     phone: {
       type: String,
       required: true,
       trim: true,
       match: [/^\+\d{10,15}$/, 'Please enter a valid phone number with country code'],
+    },
+    course: {
+      type: String,
+      required: true,
+      enum: ['BTech', 'MTech', 'BCA', 'MCA', 'BBA', 'MBA', 'Diploma']
+    },
+    branch: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    admissionYear: {
+      type: Number,
+      required: true
+    },
+    passoutYear: {
+      type: Number,
+      required: true
     },
     password: {
       type: String,
@@ -34,20 +58,14 @@
       enum: ['admin', 'faculty', 'student'],
       default: "student"
     },
-    enrolledTests: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "TestSeries",
-      },
-    ],
-    reports: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Report",
-      },
-    ],
+
     resetToken: String,
     resetTokenExpiry: Date,
+    isVerified: {
+      type: Boolean,
+      default: false,
+      required: true
+    },
   }, {
     timestamps: true,
   });
@@ -63,6 +81,14 @@
     } catch (err) {
       next(err);
     }
+  });
+  
+  // Log verification status changes
+  StudentSchema.pre('save', function(next) {
+    if (this.isModified('isVerified')) {
+      console.log(`Student ${this.email} verification status changed to: ${this.isVerified}`);
+    }
+    next();
   });
 
   // 🔁 Compare password method

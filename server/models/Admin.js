@@ -31,18 +31,13 @@ const AdminSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'faculty', 'student'],
+    default: 'admin',
+    enum: ['admin'],
   },
-  testSeriesCreated: [
+  facultyManaged: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "TestSeries",
-    },
-  ],
-  reportsGenerated: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Report",
+      ref: "Faculty",
     },
   ],
   resetToken: String,

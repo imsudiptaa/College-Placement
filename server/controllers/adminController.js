@@ -2,6 +2,8 @@ const bcrypt = require("bcryptjs");
 const path = require("path");
 const fs = require("fs");
 const Admin = require("../models/Admin");
+const Faculty = require("../models/Faculty");
+const Student = require("../models/Student");
 
 // ✅ Check if any admin exists
 exports.checkAdminExists = async (req, res) => {
@@ -160,6 +162,90 @@ exports.uploadAdminAvatar = async (req, res) => {
     });
   } catch (err) {
     console.error("Upload admin avatar error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// ✅ Create Faculty (Placement Officer only)
+exports.createFaculty = async (req, res) => {
+  try {
+    const { name, email, phone, password, specialization } = req.body;
+    const adminId = req.user.id;
+
+    const existingFaculty = await Faculty.findOne({ email });
+    if (existingFaculty) {
+      return res.status(400).json({ message: "Faculty email already exists" });
+    }
+
+    const newFaculty = new Faculty({
+      name,
+      email,
+      phone,
+      password,
+      specialization,
+      createdBy: adminId
+    });
+
+    await newFaculty.save();
+
+    // Add to admin's managed faculty list
+    await Admin.findByIdAndUpdate(adminId, {
+      $push: { facultyManaged: newFaculty._id }
+    });
+
+    res.status(201).json({
+      message: "Faculty created successfully",
+      faculty: {
+        id: newFaculty._id,
+        name: newFaculty.name,
+        email: newFaculty.email,
+        specialization: newFaculty.specialization
+      }
+    });
+  } catch (err) {
+    console.error("Create faculty error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ✅ Get all faculty managed by admin
+exports.getManagedFaculty = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const faculty = await Faculty.find({ createdBy: adminId }).select("-password");
+    res.status(200).json({ success: true, data: faculty });
+  } catch (err) {
+    console.error("Get managed faculty error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// ✅ Get all students (for admin view)
+exports.getAllStudents = async (req, res) => {
+  try {
+    const students = await Student.find({ isVerified: true }).select("-password -otp -otpExpiry");
+    res.status(200).json({ success: true, data: students });
+  } catch (err) {
+    console.error("Get all students error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// ✅ Get first admin (for faculty creation)
+exports.getFirstAdmin = async (req, res) => {
+  try {
+    const admin = await Admin.findOne().select('_id name email');
+    
+    if (!admin) {
+      return res.status(404).json({ success: false, message: "No admin found" });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: admin
+    });
+  } catch (err) {
+    console.error("Get first admin error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };

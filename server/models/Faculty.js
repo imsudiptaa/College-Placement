@@ -40,6 +40,11 @@ const facultySchema = new mongoose.Schema({
   },
   resetToken: String,
   resetTokenExpiry: Date,
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Admin",
+    required: true
+  },
 }, {
   timestamps: true
 });
@@ -51,8 +56,10 @@ facultySchema.pre("save", async function (next) {
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
+    console.log(`Password hashed for faculty ${this.email}: ${this.password.substring(0, 20)}...`);
     next();
   } catch (err) {
+    console.error(`Error hashing password for faculty ${this.email}:`, err);
     next(err);
   }
 });

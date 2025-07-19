@@ -10,6 +10,7 @@ const {
   deleteFaculty,
   getSingleFaculty,
   updateFacultyById,
+  getAllStudents,
 } = require("../controllers/facultyController");
 
 const { authenticateToken } = require("../middleware/auth");
@@ -38,5 +39,8 @@ router.get("/:id", getSingleFaculty);
 
 // ✅ PUT update faculty by ID (for edit)
 router.put("/update/:id", upload.single("avatar"), updateFacultyById);
+
+// ✅ GET all students (faculty access)
+router.get("/students", authenticateToken, getAllStudents);
 
 module.exports = router;

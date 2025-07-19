@@ -1,25 +1,16 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 
 const CreateAdmin = () => {
   const [formData, setFormData] = useState({ name: "", email: "", password: "", phone: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // ✅ Check if admin already exists
-  const { data, isLoading } = useQuery({
-    queryKey: ["adminExists"],
-    queryFn: async () => {
-      const res = await axios.get("http://localhost:3001/admin/exists");
-      return res.data;
-    },
-  });
-
-  // ✅ Mutation to create admin
+  // ✅ Mutation to create first admin
   const { mutate, isPending } = useMutation({
     mutationFn: async (newAdmin) => {
-      const res = await axios.post("http://localhost:3001/create-admin", newAdmin);
+      const res = await axios.post("http://localhost:3001/admin/create-first-admin", newAdmin);
       return res.data;
     },
     onSuccess: () => {
@@ -51,21 +42,12 @@ const CreateAdmin = () => {
       return;
     }
 
-    if (data?.exists) {
-      setError("Admin already exists. You cannot create another one.");
-      return;
-    }
-
     mutate(formData);
   };
 
-  if (isLoading) {
-    return <p style={{ textAlign: "center" }}>Checking admin status...</p>;
-  }
-
   return (
     <div style={styles.container}>
-      <h2 style={styles.heading}>Create Admin</h2>
+      <h2 style={styles.heading}>Create First Admin</h2>
       {error && <p style={styles.error}>{error}</p>}
       {success && <p style={styles.success}>{success}</p>}
 

@@ -11,10 +11,17 @@ const {
   updateAdminProfile,
   uploadAdminAvatar,
   deleteAdmin,
+  createFaculty,
+  getManagedFaculty,
+  getAllStudents,
+  getFirstAdmin,
 } = require("../controllers/adminController");
 
 // Check if any admin exists
 router.get("/exists", checkAdminExists);
+
+// Get first admin (for faculty creation)
+router.get("/first", getFirstAdmin);
 
 // Create the first admin (without authentication)
 router.post("/create-first-admin", createFirstAdmin);
@@ -38,5 +45,10 @@ router.post(
 
 // Delete admin by ID (if needed)
 router.delete("/:id", authenticateToken, deleteAdmin);
+
+// Faculty management routes
+router.post("/create-faculty", authenticateToken, createFaculty);
+router.get("/managed-faculty", authenticateToken, getManagedFaculty);
+router.get("/students", authenticateToken, getAllStudents);
 
 module.exports = router;

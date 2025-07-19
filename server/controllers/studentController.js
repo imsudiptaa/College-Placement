@@ -3,6 +3,45 @@ const Student = require("../models/Student");
 const path = require("path");
 const fs = require("fs");
 
+// ✅ Verify student account
+exports.verifyAccount = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email is required' 
+      });
+    }
+    
+    const student = await Student.findOne({ email });
+    if (!student) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Student not found' 
+      });
+    }
+    
+    // Update verification status
+    student.isVerified = true;
+    await student.save();
+    
+    console.log(`Student ${email} verified successfully`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Student account verified successfully',
+    });
+  } catch (error) {
+    console.error('Verify account error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during verification',
+    });
+  }
+};
+
 // ✅ Register student (no manual hashing)
 exports.registerStudent = async (req, res) => {
   const { name, email, password, phone } = req.body;

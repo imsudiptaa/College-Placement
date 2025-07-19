@@ -6,7 +6,11 @@ const Admin = require('../models/Admin');
 const Faculty = require('../models/Faculty');
 const Student = require('../models/Student');
 
-const { sendPasswordResetEmail } = require('../services/mailService');
+const { sendPasswordResetEmail, sendOTPEmail } = require('../services/mailService');
+
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 // Helper to get model by role
 const getModelByRole = (role) => {
@@ -38,6 +42,10 @@ router.post('/login', async (req, res) => {
       if (user) {
         const isMatch = await user.comparePassword(password);
         if (isMatch) {
+          // Check if student is verified
+          if (role === 'student' && !user.isVerified) {
+            return res.status(401).json({ message: 'Please verify your email first' });
+          }
           const token = user.generateToken();
           return res.json({ token, role, name: user.name });
         } else {
@@ -127,6 +135,122 @@ router.post('/forgot-password', async (req, res) => {
   } catch (error) {
     console.error('Error processing request:', error.message);
     res.status(500).json({ message: 'Error processing your request' });
+  }
+});
+
+// Send OTP Route
+router.post('/send-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email.endsWith('@nsec.ac.in')) {
+      return res.status(400).json({ error: 'Email must be from @nsec.ac.in domain' });
+    }
+
+    const existingStudent = await Student.findOne({ email });
+    if (existingStudent && existingStudent.isVerified) {
+      return res.status(400).json({ error: 'Student already exists' });
+    }
+
+    const otp = generateOTP();
+    await sendOTPEmail(email, otp);
+
+    global.otpStore = global.otpStore || {};
+    global.otpStore[email] = {
+      otp,
+      expiry: Date.now() + 10 * 60 * 1000
+    };
+
+    res.status(200).json({ message: 'OTP sent to your email' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Register Student Route
+router.post('/register-student', async (req, res) => {
+  try {
+    const { name, email, phone, password, course, branch, admissionYear, passoutYear, otp } = req.body;
+
+    const storedOTP = global.otpStore?.[email];
+    if (!storedOTP || storedOTP.otp !== otp || storedOTP.expiry < Date.now()) {
+      return res.status(400).json({ error: 'Invalid or expired OTP' });
+    }
+
+    const existingStudent = await Student.findOne({ email });
+    if (existingStudent && existingStudent.isVerified) {
+      return res.status(400).json({ error: 'Student already exists' });
+    }
+
+    const student = new Student({
+      name,
+      email,
+      phone,
+      password,
+      course,
+      branch,
+      admissionYear: parseInt(admissionYear),
+      passoutYear: parseInt(passoutYear),
+      isVerified: true
+    });
+
+    await student.save();
+    delete global.otpStore[email];
+
+    res.status(201).json({ message: 'Registration successful. You can now login.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
+// Resend OTP Route
+router.post('/resend-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const otp = generateOTP();
+    await sendOTPEmail(email, otp);
+
+    global.otpStore = global.otpStore || {};
+    global.otpStore[email] = {
+      otp,
+      expiry: Date.now() + 10 * 60 * 1000
+    };
+
+    res.status(200).json({ message: 'OTP resent successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Direct link to create first admin
+router.get('/create-admin', async (req, res) => {
+  try {
+    // Check if admin already exists
+    const adminExists = await Admin.findOne({});
+    if (adminExists) {
+      return res.send('Admin already exists');
+    }
+
+    // Create password hash
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('admin123', salt);
+
+    // Create admin
+    const admin = new Admin({
+      name: 'Admin User',
+      email: 'admin@example.com',
+      phone: '+919471531830',
+      password: hashedPassword,
+      role: 'admin'
+    });
+
+    await admin.save();
+    res.send('Admin created successfully! Email: admin@example.com, Password: admin123');
+  } catch (error) {
+    res.status(500).send('Error creating admin: ' + error.message);
   }
 });
 

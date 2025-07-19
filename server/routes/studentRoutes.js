@@ -6,10 +6,14 @@ const {
   getProfile,
   updateProfile,
   uploadAvatar,
+  verifyAccount
 } = require("../controllers/studentController");
 
 const { authenticateToken } = require("../middleware/auth");
 const upload = require("../middleware/upload_multer"); // Create separate multer config if you prefer
+
+// Public: Verify student account
+router.post("/verify-account", verifyAccount);
 
 // Public: Register student
 router.post("/register", registerStudent);

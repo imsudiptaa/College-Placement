@@ -27,17 +27,25 @@ const AddFaculty = () => {
 
   const { mutate, isPending: isCreating } = useMutation({
     mutationFn: async (facultyData) => {
+      const token = sessionStorage.getItem('authToken');
+      
+      // First get the admin profile to get the ID
+      const adminProfile = await axios.get('http://localhost:3001/admin/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const adminId = adminProfile.data.data._id;
+      
       const formData = new FormData();
       for (const key in facultyData) {
         formData.append(key, facultyData[key]);
       }
-      formData.append('role', 'faculty'); 
+      formData.append('role', 'faculty');
+      formData.append('createdBy', adminId);
       
       if (avatar) {
         formData.append('avatar', avatar);
       }
-
-      const token = sessionStorage.getItem('authToken');
 
       const res = await axios.post(
         'http://localhost:3001/faculty/create-faculty',

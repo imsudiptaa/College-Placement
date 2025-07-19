@@ -2,17 +2,20 @@ const bcrypt = require("bcryptjs");
 const path = require("path");
 const fs = require("fs");
 const Faculty = require("../models/Faculty");
+const Student = require("../models/Student");
 
 exports.createFaculty = async (req, res) => {
   try {
-    const { name, email, password, phone, specialization } = req.body;
+    const { name, email, password, phone, specialization, createdBy } = req.body;
 
-    if (!name || !email || !password || !phone || !specialization) {
+    if (!name || !email || !password || !phone || !specialization || !createdBy) {
       return res.status(400).json({
         success: false,
-        message: "All fields are required.",
+        message: "All fields are required, including createdBy.",
       });
     }
+
+    console.log(`Creating faculty with email: ${email}, password: ${password.substring(0, 3)}***`);
 
     const duplicate = await Faculty.findOne({ email });
     if (duplicate) {
@@ -27,29 +30,39 @@ exports.createFaculty = async (req, res) => {
       avatarPath = `/uploads/Avatar_Faculty/${req.file.filename}`;
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10); // ✅ HASHING
-
+    // Don't hash the password here, let the model's pre-save hook handle it
     const newFaculty = new Faculty({
       name,
       email,
       phone,
       specialization,
-      password: hashedPassword,
+      password, // Use the plain password, the model will hash it
       role: "faculty",
       avatar: avatarPath,
+      createdBy,
     });
+    
+    console.log(`Faculty object created, about to save: ${newFaculty.email}`);
 
-    await newFaculty.save();
+
+    const savedFaculty = await newFaculty.save();
+    console.log(`Faculty saved successfully: ${savedFaculty.email}`);
+    console.log(`Saved password hash: ${savedFaculty.password.substring(0, 20)}...`);
+
+    // Test password comparison
+    const testPassword = password;
+    const passwordMatch = await bcrypt.compare(testPassword, savedFaculty.password);
+    console.log(`Password comparison test: ${passwordMatch ? 'SUCCESS' : 'FAILED'}`);
 
     res.status(201).json({
       success: true,
       message: "Faculty created successfully",
       data: {
-        id: newFaculty._id,
-        name: newFaculty.name,
-        email: newFaculty.email,
-        specialization: newFaculty.specialization,
-        avatar: newFaculty.avatar,
+        id: savedFaculty._id,
+        name: savedFaculty.name,
+        email: savedFaculty.email,
+        specialization: savedFaculty.specialization,
+        avatar: savedFaculty.avatar,
       },
     });
   } catch (err) {
@@ -276,6 +289,17 @@ exports.updateFacultyById = async (req, res) => {
   } catch (err) {
     console.error("Update faculty error:", err);
     res.status(500).json({ success: false, message: "Update failed", error: err.message });
+  }
+};
+
+// GET ALL STUDENTS (Faculty access)
+exports.getAllStudents = async (req, res) => {
+  try {
+    const students = await Student.find({ isVerified: true }).select("-password -otp -otpExpiry");
+    res.status(200).json({ success: true, data: students });
+  } catch (err) {
+    console.error("Get all students error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 

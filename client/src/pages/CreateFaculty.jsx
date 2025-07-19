@@ -27,17 +27,30 @@ const CreateFaculty = () => {
 
   const createFacultyMutation = useMutation({
     mutationFn: async (data) => {
-      const config = {
-        headers: { "Content-Type": "multipart/form-data" },
-      };
-      const formPayload = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
-        formPayload.append(key, value);
-      });
-      if (avatar) formPayload.append("avatar", avatar);
+      try {
+        // First get an admin to use as createdBy
+        const adminRes = await axios.get("http://localhost:3001/admin/first");
+        const adminId = adminRes.data.data._id;
+        
+        const config = {
+          headers: { "Content-Type": "multipart/form-data" },
+        };
+        const formPayload = new FormData();
+        Object.entries(data).forEach(([key, value]) => {
+          formPayload.append(key, value);
+        });
+        
+        // Add createdBy field
+        formPayload.append("createdBy", adminId);
+        
+        if (avatar) formPayload.append("avatar", avatar);
 
-      const res = await axios.post("http://localhost:3001/faculty/create-faculty", formPayload, config);
-      return res.data;
+        const res = await axios.post("http://localhost:3001/faculty/create-faculty", formPayload, config);
+        return res.data;
+      } catch (error) {
+        console.error("Error in createFacultyMutation:", error);
+        throw error;
+      }
     },
     onSuccess: (data) => {
       setSuccess(data.message || "Faculty created successfully!");
